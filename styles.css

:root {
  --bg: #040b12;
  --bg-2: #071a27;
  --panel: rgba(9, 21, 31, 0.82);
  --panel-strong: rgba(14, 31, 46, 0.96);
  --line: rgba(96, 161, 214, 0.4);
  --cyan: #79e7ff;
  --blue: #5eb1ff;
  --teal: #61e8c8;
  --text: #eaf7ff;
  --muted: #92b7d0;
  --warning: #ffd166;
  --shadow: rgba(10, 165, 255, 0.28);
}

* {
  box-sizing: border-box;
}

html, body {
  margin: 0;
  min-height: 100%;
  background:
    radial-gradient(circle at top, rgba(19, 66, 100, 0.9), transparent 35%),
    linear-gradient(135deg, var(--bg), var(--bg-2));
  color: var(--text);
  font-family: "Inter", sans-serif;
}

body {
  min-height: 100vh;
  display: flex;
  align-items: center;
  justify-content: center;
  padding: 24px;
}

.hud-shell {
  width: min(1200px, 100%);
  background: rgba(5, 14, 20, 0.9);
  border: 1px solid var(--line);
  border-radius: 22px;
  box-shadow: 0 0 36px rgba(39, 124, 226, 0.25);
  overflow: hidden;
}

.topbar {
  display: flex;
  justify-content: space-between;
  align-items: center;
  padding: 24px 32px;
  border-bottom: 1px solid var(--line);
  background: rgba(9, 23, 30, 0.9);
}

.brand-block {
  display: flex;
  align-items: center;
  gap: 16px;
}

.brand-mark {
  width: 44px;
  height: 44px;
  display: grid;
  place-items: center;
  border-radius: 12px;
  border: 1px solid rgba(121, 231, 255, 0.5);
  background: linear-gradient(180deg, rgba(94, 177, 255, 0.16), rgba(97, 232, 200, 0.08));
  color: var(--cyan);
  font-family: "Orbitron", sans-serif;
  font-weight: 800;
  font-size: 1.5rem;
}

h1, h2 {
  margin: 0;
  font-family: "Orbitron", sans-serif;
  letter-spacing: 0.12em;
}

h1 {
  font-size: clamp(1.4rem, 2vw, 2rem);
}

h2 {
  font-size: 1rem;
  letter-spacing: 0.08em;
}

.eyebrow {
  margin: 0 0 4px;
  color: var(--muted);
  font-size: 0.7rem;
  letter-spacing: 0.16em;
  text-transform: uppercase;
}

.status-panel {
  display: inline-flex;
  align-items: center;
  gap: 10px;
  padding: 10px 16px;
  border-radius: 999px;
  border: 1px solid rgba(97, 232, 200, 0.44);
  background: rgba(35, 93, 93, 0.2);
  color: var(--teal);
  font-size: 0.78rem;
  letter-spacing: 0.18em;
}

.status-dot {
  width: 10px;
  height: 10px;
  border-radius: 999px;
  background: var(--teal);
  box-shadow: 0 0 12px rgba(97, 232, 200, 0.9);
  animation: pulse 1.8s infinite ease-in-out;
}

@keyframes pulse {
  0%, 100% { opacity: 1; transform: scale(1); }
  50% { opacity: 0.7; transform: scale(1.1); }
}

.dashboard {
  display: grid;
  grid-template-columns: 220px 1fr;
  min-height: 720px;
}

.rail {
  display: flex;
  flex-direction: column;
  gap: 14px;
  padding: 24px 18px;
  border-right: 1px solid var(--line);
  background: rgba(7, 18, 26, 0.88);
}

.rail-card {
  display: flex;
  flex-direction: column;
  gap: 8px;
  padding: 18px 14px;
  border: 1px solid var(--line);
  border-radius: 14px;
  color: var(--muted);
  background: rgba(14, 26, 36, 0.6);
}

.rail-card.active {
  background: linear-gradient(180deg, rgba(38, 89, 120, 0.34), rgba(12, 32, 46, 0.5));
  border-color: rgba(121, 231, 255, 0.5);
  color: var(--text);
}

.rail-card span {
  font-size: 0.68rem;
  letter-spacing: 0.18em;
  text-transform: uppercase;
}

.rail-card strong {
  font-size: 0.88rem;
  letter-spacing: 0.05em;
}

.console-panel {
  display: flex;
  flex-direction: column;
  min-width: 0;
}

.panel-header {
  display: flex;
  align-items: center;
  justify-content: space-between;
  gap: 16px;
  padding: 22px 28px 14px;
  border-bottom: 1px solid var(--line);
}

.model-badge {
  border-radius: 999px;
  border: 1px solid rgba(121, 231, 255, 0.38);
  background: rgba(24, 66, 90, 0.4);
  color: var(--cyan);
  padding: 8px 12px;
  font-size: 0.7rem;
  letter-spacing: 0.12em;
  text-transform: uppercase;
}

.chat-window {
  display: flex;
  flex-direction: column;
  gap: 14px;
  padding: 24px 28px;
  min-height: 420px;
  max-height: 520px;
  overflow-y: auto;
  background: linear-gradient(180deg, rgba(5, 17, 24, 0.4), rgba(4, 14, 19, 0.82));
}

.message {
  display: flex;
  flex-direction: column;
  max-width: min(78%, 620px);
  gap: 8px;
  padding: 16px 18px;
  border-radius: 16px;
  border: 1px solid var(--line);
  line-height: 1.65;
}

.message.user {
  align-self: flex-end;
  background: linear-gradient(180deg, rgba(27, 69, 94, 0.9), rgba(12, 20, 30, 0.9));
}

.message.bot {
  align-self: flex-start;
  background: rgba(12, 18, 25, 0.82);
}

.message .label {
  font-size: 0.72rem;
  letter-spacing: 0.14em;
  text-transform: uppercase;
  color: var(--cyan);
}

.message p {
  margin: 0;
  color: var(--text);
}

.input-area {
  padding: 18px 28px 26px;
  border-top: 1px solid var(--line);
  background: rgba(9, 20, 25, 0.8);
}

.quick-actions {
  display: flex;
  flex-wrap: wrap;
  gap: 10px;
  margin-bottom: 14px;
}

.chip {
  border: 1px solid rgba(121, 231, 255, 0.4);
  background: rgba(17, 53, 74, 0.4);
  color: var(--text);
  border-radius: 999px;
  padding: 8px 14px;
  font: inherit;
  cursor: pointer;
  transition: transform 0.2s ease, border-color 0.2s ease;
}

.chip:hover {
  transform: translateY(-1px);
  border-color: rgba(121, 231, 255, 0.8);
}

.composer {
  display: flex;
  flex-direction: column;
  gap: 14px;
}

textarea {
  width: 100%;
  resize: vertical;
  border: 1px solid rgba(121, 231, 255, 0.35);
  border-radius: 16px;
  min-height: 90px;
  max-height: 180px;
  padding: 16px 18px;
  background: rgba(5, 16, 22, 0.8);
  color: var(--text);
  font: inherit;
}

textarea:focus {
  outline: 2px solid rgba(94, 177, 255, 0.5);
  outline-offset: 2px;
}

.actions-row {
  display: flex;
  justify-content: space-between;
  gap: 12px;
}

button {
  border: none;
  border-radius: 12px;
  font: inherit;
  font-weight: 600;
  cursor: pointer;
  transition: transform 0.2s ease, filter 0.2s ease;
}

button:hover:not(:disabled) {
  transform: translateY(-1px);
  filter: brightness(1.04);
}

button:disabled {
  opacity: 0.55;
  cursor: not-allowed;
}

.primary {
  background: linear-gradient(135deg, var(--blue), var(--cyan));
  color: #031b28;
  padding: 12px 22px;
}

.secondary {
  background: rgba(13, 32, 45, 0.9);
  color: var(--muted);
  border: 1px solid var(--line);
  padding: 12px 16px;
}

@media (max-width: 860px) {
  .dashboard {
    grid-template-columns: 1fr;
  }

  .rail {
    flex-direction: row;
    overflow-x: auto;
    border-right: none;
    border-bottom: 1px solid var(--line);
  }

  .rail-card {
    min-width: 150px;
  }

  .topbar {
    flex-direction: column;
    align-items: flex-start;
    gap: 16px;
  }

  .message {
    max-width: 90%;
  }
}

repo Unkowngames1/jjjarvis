@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JARVIS | GitHub Pages Prototype</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="hud-shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <div class="brand-mark">J</div>
+          <div>
+            <p class="eyebrow">STATUS</p>
+            <h1>JARVIS</h1>
+          </div>
+        </div>
+
+        <div class="status-panel">
+          <span class="status-dot"></span>
+          <span>ONLINE</span>
+        </div>
+      </header>
+
+      <main class="dashboard">
+        <aside class="rail">
+          <div class="rail-card active">
+            <span>CORE</span>
+            <strong>COMMAND</strong>
+          </div>
+          <div class="rail-card">
+            <span>MODEL</span>
+            <strong>TINY NN</strong>
+          </div>
+          <div class="rail-card">
+            <span>DEPLOY</span>
+            <strong>GITHUB PAGES</strong>
+          </div>
+        </aside>
+
+        <section class="console-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">SYSTEM</p>
+              <h2>Conversation Interface</h2>
+            </div>
+            <div class="model-badge" id="modelState">Loading model…</div>
+          </div>
+
+          <div id="chatWindow" class="chat-window" aria-live="polite">
+            <div class="message bot">
+              <span class="label">JARVIS</span>
+              <p>Good evening. System online. Please enter a command or ask for a status update.</p>
+            </div>
+          </div>
+
+          <div class="input-area">
+            <div class="quick-actions">
+              <button class="chip" data-prompt="What is your current status?">Status</button>
+              <button class="chip" data-prompt="Give me a project summary.">Project</button>
+              <button class="chip" data-prompt="What can you do?">Capabilities</button>
+            </div>
+
+            <div class="composer">
+              <textarea id="promptInput" rows="1" placeholder="Type to JARVIS..."></textarea>
+              <div class="actions-row">
+                <button id="voiceToggle" class="secondary" disabled aria-disabled="true">Voice controls coming soon</button>
+                <button id="sendButton" class="primary">Send</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

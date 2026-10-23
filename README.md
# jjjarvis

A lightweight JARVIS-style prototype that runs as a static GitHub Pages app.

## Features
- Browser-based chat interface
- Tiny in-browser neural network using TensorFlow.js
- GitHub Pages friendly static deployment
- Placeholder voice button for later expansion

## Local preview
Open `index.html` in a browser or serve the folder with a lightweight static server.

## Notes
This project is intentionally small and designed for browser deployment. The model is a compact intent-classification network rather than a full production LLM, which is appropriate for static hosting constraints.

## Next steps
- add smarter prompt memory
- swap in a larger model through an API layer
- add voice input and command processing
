@@ -1,0 +1,230 @@
+const MODEL_LABELS = [
+  'greeting',
+  'status',
+  'capabilities',
+  'planning',
+  'general'
+];
+
+const TRAINING_DATA = [
+  { label: 'greeting', text: 'hello jarvis' },
+  { label: 'greeting', text: 'hi there' },
+  { label: 'greeting', text: 'good morning jarvis' },
+  { label: 'status', text: 'what is your current status' },
+  { label: 'status', text: 'are you online' },
+  { label: 'status', text: 'system check' },
+  { label: 'capabilities', text: 'what can you do' },
+  { label: 'capabilities', text: 'tell me your features' },
+  { label: 'capabilities', text: 'what are your abilities' },
+  { label: 'planning', text: 'make a project plan' },
+  { label: 'planning', text: 'help me plan this app' },
+  { label: 'planning', text: 'create a roadmap' },
+  { label: 'general', text: 'explain this concept' },
+  { label: 'general', text: 'what do you think' },
+  { label: 'general', text: 'give me a summary' },
+  { label: 'general', text: 'how should I start' },
+  { label: 'general', text: 'keep me updated' }
+];
+
+const chatWindow = document.getElementById('chatWindow');
+const promptInput = document.getElementById('promptInput');
+const sendButton = document.getElementById('sendButton');
+const modelState = document.getElementById('modelState');
+const quickChips = document.querySelectorAll('.chip');
+
+let model = null;
+let vocab = [];
+
+function tokenize(text) {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function buildVocabulary(data) {
+  const tokens = new Set();
+  data.forEach((entry) => {
+    tokenize(entry.text).forEach((token) => tokens.add(token));
+  });
+
+  return Array.from(tokens).sort();
+}
+
+function encodeText(text) {
+  const vector = new Array(vocab.length).fill(0);
+  const tokens = tokenize(text);
+
+  tokens.forEach((token) => {
+    const index = vocab.indexOf(token);
+    if (index !== -1) {
+      vector[index] = 1;
+    }
+  });
+
+  return vector;
+}
+
+function createModel() {
+  const hiddenUnits = Math.max(8, Math.min(32, Math.floor(vocab.length / 2)));
+  const neuralNet = tf.sequential();
+
+  neuralNet.add(
+    tf.layers.dense({
+      inputShape: [vocab.length],
+      units: hiddenUnits,
+      activation: 'relu'
+    })
+  );
+
+  neuralNet.add(
+    tf.layers.dense({
+      units: MODEL_LABELS.length,
+      activation: 'softmax'
+    })
+  );
+
+  neuralNet.compile({
+    optimizer: 'adam',
+    loss: 'sparseCategoricalCrossentropy',
+    metrics: ['accuracy']
+  });
+
+  return neuralNet;
+}
+
+async function trainModel() {
+  vocab = buildVocabulary(TRAINING_DATA);
+  const xs = tf.tensor2d(TRAINING_DATA.map((entry) => encodeText(entry.text)));
+  const labels = TRAINING_DATA.map((entry) => MODEL_LABELS.indexOf(entry.label));
+  const ys = tf.tensor1d(labels, 'int32');
+
+  model = createModel();
+  modelState.textContent = 'Training tiny model...';
+
+  await model.fit(xs, ys, {
+    epochs: 128,
+    batchSize: 8,
+    shuffle: true,
+    callbacks: {
+      onEpochEnd: (_, logs) => {
+        if (logs && logs.acc !== undefined) {
+          modelState.textContent = `Model ready • ${logs.acc.toFixed(2)} acc`;
+        }
+      }
+    }
+  });
+
+  modelState.textContent = 'Tiny model ready';
+}
+
+function appendMessage(role, text) {
+  const message = document.createElement('div');
+  message.className = `message ${role}`;
+
+  const label = document.createElement('span');
+  label.className = 'label';
+  label.textContent = role === 'user' ? 'YOU' : 'JARVIS';
+
+  const paragraph = document.createElement('p');
+  paragraph.textContent = text;
+
+  message.appendChild(label);
+  message.appendChild(paragraph);
+  chatWindow.appendChild(message);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+function getSystemReply(input) {
+  const normalizedInput = input.toLowerCase();
+  const encoded = tf.tensor2d([encodeText(input)]);
+  const prediction = model.predict(encoded);
+  const probabilities = prediction.dataSync();
+  const bestIndex = probabilities.indexOf(Math.max(...probabilities));
+  const predictedLabel = MODEL_LABELS[bestIndex];
+
+  if (normalizedInput.includes('status') || normalizedInput.includes('online')) {
+    return 'Core systems are stable. Local model is active, deployment target is GitHub Pages, and the command interface is ready for input.';
+  }
+
+  if (normalizedInput.includes('what can you do') || normalizedInput.includes('capabilities') || normalizedInput.includes('abilities')) {
+    return 'I can manage chat commands, produce project summaries, classify intent with a tiny local neural network, and act as a front-end interface for a browser-based assistant prototype.';
+  }
+
+  if (normalizedInput.includes('plan') || normalizedInput.includes('roadmap') || normalizedInput.includes('project')) {
+    return 'Project plan: 1) build the chat shell, 2) add model inference in-browser, 3) tune prompts and memory, 4) expand the interface with voice and automation later.';
+  }
+
+  if (normalizedInput.includes('hello') || normalizedInput.includes('hi')) {
+    return 'Hello. I am JARVIS, your GitHub Pages command interface. I am ready to assist with prompts, status checks, and planning tasks.';
+  }
+
+  if (predictedLabel === 'greeting') {
+    return 'Good to hear from you. I am online and ready to help.';
+  }
+
+  if (predictedLabel === 'status') {
+    return 'Status is nominal. The interface is active, the model is loaded in-browser, and the deployment is prepared for GitHub Pages.';
+  }
+
+  if (predictedLabel === 'capabilities') {
+    return 'I can answer prompts, classify your intent, summarize projects, and give a lightweight AI assistant experience entirely from the browser.';
+  }
+
+  if (predictedLabel === 'planning') {
+    return 'I recommend a structured approach: prototype the UI, add the local neural net, validate prompts, then extend with voice and system integrations.';
+  }
+
+  return `I processed your request using a tiny in-browser neural net. Based on the input, the primary intent is ${predictedLabel}. I can help with summaries, system checks, or project planning as the interface grows.`;
+}
+
+async function handleSubmit() {
+  const rawValue = promptInput.value.trim();
+  if (!rawValue) {
+    return;
+  }
+
+  appendMessage('user', rawValue);
+  promptInput.value = '';
+  promptInput.focus();
+
+  if (!model) {
+    appendMessage('bot', 'The tiny model is still initializing. Please wait a moment and try again.');
+    return;
+  }
+
+  const reply = getSystemReply(rawValue);
+  appendMessage('bot', reply);
+}
+
+promptInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    handleSubmit();
+  }
+});
+
+quickChips.forEach((chip) => {
+  chip.addEventListener('click', () => {
+    promptInput.value = chip.dataset.prompt;
+    promptInput.focus();
+  });
+});
+
+sendButton.addEventListener('click', handleSubmit);
+
+async function init() {
+  try {
+    await trainModel();
+  } catch (error) {
+    console.error(error);
+    modelState.textContent = 'Model error';
+    appendMessage(
+      'bot',
+      'There was an issue initializing the tiny TensorFlow.js model. Refresh the page and try again.'
+    );
+  }
+}
+
+init();
